@@ -58,6 +58,28 @@ namespace ScalewaySpaces
 			return response.S3Objects;
 		}
 
+		public DeleteObjectResponse DeleteObject(string path)
+		{
+			DeleteObjectRequest request = new DeleteObjectRequest()
+			{
+				BucketName = bucketName,
+				Key = path
+			};
+			DeleteObjectResponse response = client.DeleteObjectAsync(request).Result;
+			return response;
+		}
+
+		public PutObjectResponse CreateDirectory(string path)
+		{
+			PutObjectRequest request = new PutObjectRequest
+			{
+				BucketName = bucketName,
+				Key = path
+			};
+			PutObjectResponse response = client.PutObjectAsync(request).Result;
+			
+			return response;
+		}
 
 		public Stream StreamFileFromS3(string path)
 		{
@@ -130,6 +152,34 @@ namespace ScalewaySpaces
 			return response;
 		}
 
+		public bool RenameObject(string path, string newPath)
+		{
+			CopyObjectRequest request = new CopyObjectRequest
+			{
+				SourceBucket = bucketName,
+				DestinationBucket = bucketName,
+				SourceKey = path,
+				DestinationKey = newPath
+			};
+			CopyObjectResponse response = client.CopyObjectAsync(request).Result;
+			GetObjectMetadataRequest req = new GetObjectMetadataRequest
+			{
+				BucketName = bucketName,
+				Key = path
+			};
+			GetObjectMetadataResponse resp = client.GetObjectMetadataAsync(req).Result;
+			
+			if (resp.ETag == response.ETag)
+			{
+				DeleteObject(path);
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+
 		public bool ObjectExists(string path)
 		{
 			try
@@ -148,7 +198,7 @@ namespace ScalewaySpaces
 				{
 					return false;
 				}
-				throw;
+				return false;
 			}
 		}
 	}
