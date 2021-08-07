@@ -13,12 +13,12 @@ namespace ScalewaySpaces
 {
 	public class ScalewaySpace
 	{
-		private const string bucketName = "launchers";
-		private const string s3AccessKey = "SCW91QGYBQWS58H96YVT";
-		private const string s3SecretKey = "ebabea8c-3493-4270-9827-bd0e3cd4e0f0";
+		private const string bucketName = "gms";
+		private const string s3AccessKey = "X8U0Z7RCKBQ85O68WKX0";
+		private const string s3SecretKey = "SFngAdeeTCCJz4kDqyIBV0jeDbdRCkQ37p8jtQry";
 
-		private readonly string s3RegionURL = "https://s3.fr-par.scw.cloud";
-		private readonly string s3Region = "fr-par";
+		private readonly string s3RegionURL = "https://s3.eu-central-1.wasabisys.com";
+		private readonly string s3Region = "eu-central-1";
 
 		private IAmazonS3 client;
 		private AmazonS3Config config;
@@ -92,25 +92,27 @@ namespace ScalewaySpaces
 			return response.ResponseStream;
 		}
 
-		public long UploadObject(string path, Stream dataStream)
+		public long UploadObject(string path, Stream dataStream, string name)
 		{
 			PutObjectRequest request = new PutObjectRequest()
 			{
 				BucketName = bucketName,
 				Key = path,
-				InputStream = dataStream
+				InputStream = dataStream,
 			};
+			request.Metadata.Add("name", name);
 			PutObjectResponse response = client.PutObjectAsync(request).Result;
 			return response.ContentLength;
 		}
 
-		public InitiateMultipartUploadResponse InitMultipartUpload(string path)
+		public InitiateMultipartUploadResponse InitMultipartUpload(string path, string name)
 		{
 			InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest
 			{
 				BucketName = bucketName,
 				Key = path,
 			};
+			request.Metadata.Add("name", name);
 			InitiateMultipartUploadResponse response = client.InitiateMultipartUploadAsync(request).Result;
 			return response;
 		}
@@ -152,8 +154,20 @@ namespace ScalewaySpaces
 			return response;
 		}
 
+		public MetadataCollection GetObjectMeta(S3Object obj)
+		{
+			GetObjectMetadataRequest request = new GetObjectMetadataRequest
+			{
+				BucketName = bucketName,
+				Key = obj.Key
+			};
+			GetObjectMetadataResponse response = client.GetObjectMetadataAsync(request).Result;
+			return response.Metadata;
+		}
+
 		public bool RenameObject(string path, string newPath)
 		{
+			/*
 			CopyObjectRequest request = new CopyObjectRequest
 			{
 				SourceBucket = bucketName,
@@ -162,14 +176,15 @@ namespace ScalewaySpaces
 				DestinationKey = newPath
 			};
 			CopyObjectResponse response = client.CopyObjectAsync(request).Result;
+			
 			GetObjectMetadataRequest req = new GetObjectMetadataRequest
 			{
 				BucketName = bucketName,
-				Key = path
+				Key = newPath
 			};
 			GetObjectMetadataResponse resp = client.GetObjectMetadataAsync(req).Result;
 			
-			if (resp.ETag == response.ETag)
+			if (resp.HttpStatusCode != System.Net.HttpStatusCode.NotFound)
 			{
 				DeleteObject(path);
 				return true;
@@ -178,6 +193,8 @@ namespace ScalewaySpaces
 			{
 				return false;
 			}
+			*/
+			return true;
 		}
 
 		public bool ObjectExists(string path)
@@ -198,8 +215,14 @@ namespace ScalewaySpaces
 				{
 					return false;
 				}
-				return false;
+				throw;
 			}
+		}
+
+		public bool Exists(string prefix)
+		{
+			var response = client.GetAllObjectKeysAsync(bucketName, prefix, null).Result;
+			return response.Count > 0;
 		}
 	}
 }
